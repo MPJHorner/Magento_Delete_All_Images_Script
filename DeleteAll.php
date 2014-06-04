@@ -121,7 +121,7 @@ class MagentoConnection{
 		$GetProductImageList_FaultCount = 0;
 		GetProductImageList_TryAgain:
 		try{
-			$this->client->catalogProductAttributeMediaList($this->session, $ProductID);
+			$ImageList = $this->client->catalogProductAttributeMediaList($this->session, $ProductID);
 			$LogString = 'Retrieving ProductID:' . $ProductID . ' Image List...';
 			$this->LogInfo($LogString);
 		}catch (Exception $e){
@@ -135,6 +135,7 @@ class MagentoConnection{
 				$this->LogInfo($LogString);
 			}
 		}
+		return $ImageList;
 	}
 	
 	function DeleteProductImage($ProductID, $Image){
