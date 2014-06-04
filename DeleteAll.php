@@ -8,6 +8,8 @@
 $username = 'username'; //Magento SOAP Username
 $password = 'password'; //Magento SOAP Password
 $url = 'http://www.yourdomain.com/index.php/api/v2_soap/?wsdl'; //Magento SOAP URL
+$http_username = ''; //LEAVE BLANK UNLESS... You require HTTP authentication to access the protected SOAP URL.
+$http_password = ''; //LEAVE BLANK UNLESS... You require HTTP authentication to access the protected SOAP URL.
 /* Credential Configuration */
 
 /* System Configuration */
@@ -19,21 +21,31 @@ class MagentoConnection{
 	public $username;
 	public $password;
 	public $url;
+	public $http_username;
+	public $http_password;
 	public $retry_attempts;
 	public $Deletions;
 	
-	function __construct($username, $password, $url, $retry_attempts){
+	function __construct($username, $password, $url, $retry_attempts $http_username, $http_password){
 		$this->username = $username;
 		$this->password = $password;
 		$this->url = $url;
 		$this->retry_attempts = $retry_attempts;
+		$this->http_username = $http_username;
+		$this->http_password = $http_password;
 	}
 	
 	function GetSession(){
 		$GetSession_FaultCount = 0;
 		GetSession_TryAgain:
 		try{
-			$this->client = new SoapClient($this->url);
+			if($this->http_username != '' || $this->http_password != ''){
+				//Connect using HTTP Authentication
+				$this->client = new SoapClient($this->url,array('login' => $this->http_username, 'password' => $this->http_password));
+			}else{
+				//Connect without HTTP Authentication
+				$this->client = new SoapClient($this->url);
+			}
 		}catch (Exception $e){
 			$GetSession_FaultCount++;
 			if($this->retry_attempts < $GetSession_FaultCount){
@@ -128,7 +140,7 @@ class MagentoConnection{
 }
 
 //Setup Magento Client & Delete All Images
-$Connection = new MagentoConnection($username, $password, $url. $retry_attempts);
+$Connection = new MagentoConnection($username, $password, $url. $retry_attempts, $http_username, $http_password);
 $Connection->GetSession();
 $Connection->GetProductList();
 $Connection->DeleteAllImages();
