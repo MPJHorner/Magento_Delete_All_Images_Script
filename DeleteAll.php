@@ -19,6 +19,8 @@ class MagentoConnection{
 	public $username;
 	public $password;
 	public $url;
+	public $retry_attempts;
+	public $Deletions;
 	
 	function __construct($username, $password, $url, $retry_attempts){
 		$this->username = $username;
@@ -85,10 +87,11 @@ class MagentoConnection{
 	}
 	
 	function DeleteProductImage($ProductID, $Image){
+		$DeletionResult = false;
 		$DeleteProductImage_FaultCount = 0;
 		DeleteProductImage_TryAgain:
 		try{
-			$this->client->catalogProductAttributeMediaRemove($this->session, $ProductID, $Image);
+			$DeletionResult = $this->client->catalogProductAttributeMediaRemove($this->session, $ProductID, $Image);
 		}catch (Exception $e){
 			$DeleteProductImage_FaultCount++;
 			if($this->retry_attempts < $GetDeleteProductImage_FaultCount){
@@ -97,6 +100,7 @@ class MagentoConnection{
 				echo '<br> Error using DeleteProductImage | ProductID:' . $ProductID . ' | Image:' . $Image . ' | Error Code:' . $e->faultcode . ' | Error Message:' . $e->getMessage();
 			}
 		}
+		return $DeletionResult;
 	}
 	
 	function DeleteAllImages(){
@@ -106,16 +110,30 @@ class MagentoConnection{
 			$Product->Images = $this->GetProductImageList($Product->product_id);
 				//Loop Through Images
 				foreach($Product->Images as $Image):
+					$Deletion_FaultCount = 0;
+					Delete_TryAgain:
 					//Delete Images
-					$this->DeleteProductImage($Product->product_id, $Image->file);
+					$DeletionResult = $this->DeleteProductImage($Product->product_id, $Image->file);
+					if($DeletionResult != true){
+						$Deletion_FaultCount++;
+						if($this->retry_attempts < $Deletion_FaultCount){
+							goto Delete_TryAgain;
+						}
+					}else{
+						$this->Deletions[] = array($Product->product_id, $Image->file);
+					}
 				endforeach;
 		endforeach;
 	}
 }
 
-//Setup Magento Client
+//Setup Magento Client & Delete All Images
 $Connection = new MagentoConnection($username, $password, $url. $retry_attempts);
 $Connection->GetSession();
 $Connection->GetProductList();
 $Connection->DeleteAllImages();
+
+//Array of deletions available at.
+//var_dump($Connection->Deletions);
+
 ?>
