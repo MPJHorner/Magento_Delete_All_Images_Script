@@ -150,7 +150,7 @@ class MagentoConnection{
 			$this->LogInfo($LogString);
 		}catch (Exception $e){
 			$DeleteProductImage_FaultCount++;
-			if($this->retry_attempts < $GetDeleteProductImage_FaultCount){
+			if($this->retry_attempts < $DeleteProductImage_FaultCount){
 				$LogString = 'Attempt failed, attempt ' . $DeleteProductImage_FaultCount . '. Retrying ...';
 				$this->LogInfo($LogString);
 				goto DeleteProductImage_TryAgain;
