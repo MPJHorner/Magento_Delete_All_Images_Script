@@ -165,7 +165,7 @@ class MagentoConnection{
 		foreach($this->ProductList as $Product):
 			//Get Images For Product
 			$Product->Images = $this->GetProductImageList($Product->product_id);
-				if(isset($products->Images)){
+				if(isset($Product->Images)){
 					//Loop Through Images
 					foreach($Product->Images as $Image):
 						$Deletion_FaultCount = 0;
