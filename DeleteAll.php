@@ -10,6 +10,8 @@ $password = 'password'; //Magento SOAP Password
 $url = 'http://www.yourdomain.com/index.php/api/v2_soap/?wsdl'; //Magento SOAP URL
 $http_username = ''; //LEAVE BLANK UNLESS... You require HTTP authentication to access the protected SOAP URL.
 $http_password = ''; //LEAVE BLANK UNLESS... You require HTTP authentication to access the protected SOAP URL.
+$min_product_id = '0'; //Min productID to delete images for. If deleting all Leave as 0. - Useful to amend if job needs restarting.
+$max_product_id = '1000000'; //Max productID to delete image for. If deleting all leave as high number.
 /* Credential Configuration */
 
 /* System Configuration */
@@ -160,30 +162,33 @@ class MagentoConnection{
 		return $DeletionResult;
 	}
 	
-	function DeleteAllImages(){
+	function DeleteAllImages($min_product_id, $max_product_id){
 		//Loop Through Products
 		foreach($this->ProductList as $Product):
-			//Get Images For Product
-			$Product->Images = $this->GetProductImageList($Product->product_id);
-				if(isset($Product->Images)){
-					//Loop Through Images
-					foreach($Product->Images as $Image):
-						$Deletion_FaultCount = 0;
-						Delete_TryAgain:
-						//Delete Images
-						$DeletionResult = $this->DeleteProductImage($Product->product_id, $Image->file);
-						if($DeletionResult != true){
-							$Deletion_FaultCount++;
-							if($this->retry_attempts < $Deletion_FaultCount){
-								goto Delete_TryAgain;
+			//Skip if product isn't between range.
+			if($Product->product_id >= $min_product_id && $Product->product_id <= $max_product_id){
+				//Get Images For Product
+				$Product->Images = $this->GetProductImageList($Product->product_id);
+					if(isset($Product->Images)){
+						//Loop Through Images
+						foreach($Product->Images as $Image):
+							$Deletion_FaultCount = 0;
+							Delete_TryAgain:
+							//Delete Images
+							$DeletionResult = $this->DeleteProductImage($Product->product_id, $Image->file);
+							if($DeletionResult != true){
+								$Deletion_FaultCount++;
+								if($this->retry_attempts < $Deletion_FaultCount){
+									goto Delete_TryAgain;
+								}
+							}else{
+								$this->Deletions[] = array($Product->product_id, $Image->file);
+								$LogString = 'Deleted - ProductID:' . $Product->product_id . '. File:' . $Image->file;
+								$this->LogInfo($LogString);
 							}
-						}else{
-							$this->Deletions[] = array($Product->product_id, $Image->file);
-							$LogString = 'Deleted - ProductID:' . $Product->product_id . '. File:' . $Image->file;
-							$this->LogInfo($LogString);
-						}
-					endforeach;
-				}
+						endforeach;
+					}
+			}
 		endforeach;
 	}
 }
@@ -193,7 +198,7 @@ $Connection = new MagentoConnection($username, $password, $url, $retry_attempts,
 $Connection->LogSettings($log_to_file, $log_file);
 $Connection->GetSession();
 $Connection->GetProductList();
-$Connection->DeleteAllImages();
+$Connection->DeleteAllImages($min_product_id, $max_product_id);
 
 //Array of deletions available at.
 //var_dump($Connection->Deletions);
